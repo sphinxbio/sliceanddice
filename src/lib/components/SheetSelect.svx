@@ -1,0 +1,144 @@
+<script>
+  import { browser } from '$app/environment';
+  import { Sheet, Toolbar } from "$lib/components/svelte-sheets";
+
+  export let data;
+  export let selected;
+
+  let active = 0;
+  let sheetData;
+  let columns;
+  let mergeCells = {};
+  let style = {};
+  export let selectedData = [];
+
+  let options = {
+    tableHeight: "200px",
+    tableWidth: "100%",
+    defaultHeaderColWidth: 50,
+    defaultRowHeight: 24,
+    // minDimensions: [5, 5],
+    // style: {
+    //   fontSize: "6px",
+    //   cellPadding: "1px",
+    // },
+  };
+
+  function getSelectedData(data, selectedRange) {
+    if (!selectedRange || !data) return [];
+
+    const [startCoord, endCoord] = selectedRange.length === 1 
+      ? [selectedRange[0], selectedRange[0]]
+      : selectedRange;
+
+    const start = {
+      r: parseInt(startCoord.slice(1)) - 1,
+      c: startCoord.charCodeAt(0) - 65,
+    };
+    const end = {
+      r: parseInt(endCoord.slice(1)) - 1,
+      c: endCoord.charCodeAt(0) - 65,
+    };
+
+    const selectedData = [];
+
+    // console.log('📍', start, end)
+    for (let row = start.r; row <= end.r; row++) {
+      const rowData = data[row]?.slice(start.c, end.c + 1) ?? [];
+      selectedData.push(rowData);
+    }
+
+    return selectedData;
+  }
+
+  $: if (data && data.sheets && data.sheets[active]) {
+    sheetData = data.sheets[active].data;
+    columns = data.sheets[active].columns;
+    mergeCells = data.sheets[active].mergeCells || {};
+    style = data.sheets[active].style;
+  }
+
+  $: selectedData = getSelectedData(sheetData, selected);
+  // $: if(selected || selectedData.length>0) console.log('selected:', selected, selectedData);
+
+
+  let copied = false;
+  function copySelectedData() {
+    const csvData = selectedData.map(row => row.join(',')).join('\n');
+    navigator.clipboard.writeText(csvData).then(() => {
+      console.log('Selected data copied to clipboard');
+      copied = true;
+      setTimeout(() => {
+        copied = false;
+      }, 4000);
+    }).catch(err => {
+      console.error('Failed to copy selected data: ', err);
+    });
+  }
+
+</script>
+
+{#if browser}
+  <div class="sheet-selector w-full">
+    <!-- <Toolbar bind:sheetNames={data.sheetNames} bind:active /> -->
+    {#if sheetData}
+      <div class="sheet-preview">
+        <Sheet bind:selected {mergeCells} {columns} data={sheetData} {active} {options} />
+      </div>
+    {/if}
+  </div>
+{/if}
+
+{#if selected}
+  <button on:click={copySelectedData} class="copy-button | selected-data | text-sm mt-1 | text-amber-700 hover:text-amber-900 hover:text-underline">
+    {#if copied}
+      Copied!
+    {:else}
+      Copy 
+    {/if}
+    • Selected Data:
+    <span class="">{selectedData?.length} rows</span> •
+    <span class="">{selectedData?.[0]?.length} columns</span> •
+    <span class="">{selectedData?.length * selectedData?.[0]?.length} cells</span>
+  </button>
+{/if}
+
+
+
+
+<style lang="scss" global>
+  .sheet-cleaner {
+    @apply p-4;
+  }
+
+  .sheet-selector {
+    td {
+      @apply leading-3;
+    }
+  }
+  html {
+    line-height: inherit !important;
+  }
+
+  .sheet-preview {
+    width: 100%;
+    max-height: 200px;
+    overflow: scroll;
+
+    *, td {
+      font-size: 12px !important;
+      line-height: 10px;
+    }
+
+    .sheet_container {
+      table {
+        table-layout: fixed;
+      }
+
+      th, td {
+        padding: 1px;
+        line-height: 1;
+      }
+    }
+  }
+</style>

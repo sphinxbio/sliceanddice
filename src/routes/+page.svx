@@ -1,0 +1,56 @@
+
+<!-- 
+
+  Slice n Dice main page
+
+ -->
+
+<script>
+
+  import Intro from "$lib/components/Intro.svx";
+  import Uploader from "$lib/components/Uploader.svx";
+  import DatasetAnalyzer from "$lib/components/DatasetAnalyzer.svx";
+  import Outro from "$lib/components/Outro.svx";
+
+  export let datasets
+
+  console.log(`👋👋 Code can be found at https://github.com/sphinxbio/sliceanddice. We know you can do a better job, so why not work with us? jobs@sphinxbio.com`)
+
+</script>
+
+
+<div class="sheet-app | h-full">
+  <Intro />
+  <Uploader bind:datasets={datasets} />
+
+  {#if datasets}
+    <div class="UploadAnalyzer | flex flex-row flex-wrap justify-center gap-4 | max-w-6xl mx-auto">
+      {#each Object.values(datasets) as dataset}
+        <DatasetAnalyzer {dataset} />
+      {/each}
+    </div>  
+  {/if}
+
+  <Outro />
+</div>
+
+
+
+
+
+
+
+<style lang="scss" global>
+
+  :root {
+    // --black-dirt: #1a202c;
+    --black-dirt: #322208;
+  }
+
+  
+  .sheet-cleaner {
+    @apply p-4;
+  }
+
+
+</style>

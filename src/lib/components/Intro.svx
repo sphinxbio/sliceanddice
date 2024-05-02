@@ -1,0 +1,24 @@
+
+<div class="font-bold text-4xl text-center | pt-12">
+
+  <img src="/slicendice.png" alt="Slice and Dice" class="w-48 mx-auto">
+
+  slice <span class="text-5xl font-marcellus text-amber-900">&</span><span class="pl-4">dice</span>
+</div>
+
+<div class="text-center pt-8 max-w-xl mx-auto | text-amber-700 leading-6">
+  A small experiment that uses LLMs to <br>analyze and isolate data boundaries within messy spreadsheets.
+  <span class="block mt-6">⚠️ Your sheet uploads will be uploaded to OpenAI/Claude/Groq, and monitored in our analytics. Please don't upload any sensitive or private data! ⚠️</span>
+</div>
+
+<style lang="scss" global>
+  div {
+    color: var(--black-dirt);
+  }
+
+  .font-marcellus {
+    font-family: 'Marcellus', serif;
+  }
+
+
+</style>

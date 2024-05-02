@@ -1,0 +1,233 @@
+
+<div class="Sheets-uploader | my-8 max-w-2xl mx-auto |  ">
+  <div class="shadow-sm drop-shadow-sm shadow-amber-200/70 rounded-xl">
+    <!-- preload tw -->
+    <span class="whitespace-pre hidden border-transparent p-4 py-8 mb-1 ease-in-out hover:ease-in-out focus-within:ease-in-out"></span>
+    <div class="Abstract-upload dropzone-container grid mb-2 {dropContainerClasses} "
+      role="region"
+      on:dragover|preventDefault={handleDragOver}
+      on:dragleave|preventDefault={handleDragLeave}>
+      <label for="dropzone-file" class="items-center relative w-full cursor-pointer overflow-scroll text-center | {dropClasses}">
+        <div class="text-center items-center pt-4 pb-8">
+          <!-- <Icon class="w-12 h-12 text-amber-700" icon="ph:upload-duotone" /> -->
+          <Icon class="w-20 h-20 text-amber-700 mx-auto inline-block" icon="game-icons:katana" />
+          <div class="text-base mt-3 text-amber-800">drop a spreadsheet</div>
+          <div class="text-sm mt-1 text-amber-800/50">csv or excel</div>
+
+
+          {#if files && files.length > 0}
+            <div class="fileslist px-8">
+              {#each files as file}
+                <div class="file | flex items-center justify-between bg-amber-100/50 p-2 rounded-md mt-2">
+                  <div class="file-name">{file.name}</div>
+                  <div class="file-size text-amber-800 text-sm">{(file.size / 1024).toFixed(2)} KB</div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+          
+        </div>
+        <input id="dropzone-file" type="file" class="cursor-pointer absolute top-0 left-0 w-full h-full opacity-0" bind:files={files} on:change={()=>{extractFile()}} />
+        <!-- <input id="dropzone-file" type="file" class="cursor-pointer absolute top-0 left-0 w-full h-full opacity-0" bind:files={files} on:change={()=>{extractFile()}} multiple /> -->
+        <!-- <input id="dropzone-file" type="file" class="cursor-pointer absolute top-0 left-0 w-full h-full opacity-0" bind:files={files} multiple /> -->
+      </label>
+      <div class="load-examples">
+        <div class="text-center text-amber-600/50 mt-6 mb-2">or Load some examples</div>
+        <div class="grid grid-cols-2 gap-1 mx-auto">
+          <button type="button" on:click={()=>csvText=phage_titration} class="text-center inline-block cursor-pointer bg-amber-100 hover:bg-amber-200 text-amber-800 text-base font-medium mr-2 px-2.5 py-1 rounded border-2 border-amber-200 hover:no-underline">Phage titration</button>
+          <button type="button" on:click={()=>csvText=microbial_growrth_dirty} class="text-center inline-block cursor-pointer bg-amber-100 hover:bg-amber-200 text-amber-800 text-base font-medium mr-2 px-2.5 py-1 rounded border-2 border-amber-200 hover:no-underline">Microbial growth curves</button>
+        </div>
+      </div>
+      <div class="csvText-entry">
+        <div class="text-center text-amber-600/50 mt-6 mb-2">or Paste some CSV data</div>
+        <!-- <textarea bind:value={csvText} on:blur={extractFile(csvText)} class="w-full p-2 border-2 rounded-md border-amber-200 bg-amber-100 outline-amber-600 " rows="2"></textarea> -->
+        <textarea bind:value={csvText} class="w-full p-2 border-2 rounded-md border-amber-200 bg-amber-100 outline-amber-600 text-xs " rows="6"></textarea>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<script>
+import { writable } from 'svelte/store';
+
+  import XLSX from "xlsx";
+
+  import Icon from '@iconify/svelte';
+  export let dropClasses = ``;
+  export let dropContainerClasses = ` | rounded-xl p-6 bg-amber-100/50 border-amber-300 `;
+  export let files=[], errorMessage;
+  export let csvText='';
+  export let loadingHasStarted = false;
+  export let message='';
+
+  import microbial_growrth_dirty from '$lib/samples/microbial_growth_dirty.csv?raw'
+  import phage_titration from '$lib/samples/phage_titration.csv?raw'
+
+  import { extractJson, groqPromptStream  } from "$lib/scripts/client-helpers";
+  import { convert } from "$lib/components/svelte-sheets/convert";
+
+  
+  // datasets processed to be compatible with svelte-sheets / xlsx
+  export let datasets = {};
+  $: if (Object.values(datasets).length > 0) {console.log('datasets:', datasets)}
+
+  let isDraggingOver = false;
+
+
+  function handleDragOver() {
+    isDraggingOver = true;
+  }
+  function handleDragLeave() {
+    isDraggingOver = false;
+    extractFile();
+  }
+  $: if (csvText) {
+    extractFile(csvText);
+  }
+
+  $: dropClasses = `rounded-lg border-2 border-dashed border-amber-800/20 hover:bg-amber-100 pt-4 | ${isDraggingOver ? 'bg-amber-200/40' : ''}`;
+
+
+  async function extractFile(input) {
+    isDraggingOver = false;
+    loadingHasStarted = true;
+
+    if (!input && files.length === 0 && csvText.trim() === '') {
+      message = 'Please upload a file or paste some CSV data!';
+      loadingHasStarted = false;
+      return;
+    }
+
+    try {
+      const processFile = async (file, extension) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          let sheets, sheetNames;
+          if (extension === 'xlsx' || extension === 'xls') {
+            const wb = XLSX.read(new Uint8Array(reader.result), {
+              type: "array",
+              cellFormula: true,
+              cellStyles: true,
+            });
+            sheets = convert(wb);
+            sheets = sheets.filter(sheet => sheet.sheetName !== 'Export Summary');
+            sheetNames = sheets.map((s) => s.sheetName);
+          } else if (extension === 'csv') {
+            let input = e.target.result;
+            if (input instanceof ArrayBuffer) {
+              const decoder = new TextDecoder('utf-8');
+              input = decoder.decode(input);
+            }
+            console.log('csv input:', input);
+            const delimiter = input.indexOf('\t') !== -1 ? '\t' : ',';
+            const csvRows = input?.trim().split('\n');
+            sheets = [{
+              rows: csvRows.map(row => row.split(delimiter)),
+              columns: Array.from({ length: csvRows[0].split(delimiter).length }, () => ({ width: '100px' })),
+              data: csvRows.map(row => row.split(delimiter)),
+              style: {},
+              sheetName: 'Sheet1',
+              mergeCells: []
+            }];
+            sheetNames = ['Sheet1'];
+          }
+
+          const runId = Math.random().toString(36).substring(2, 12);
+          const sheetData = { runId, name: file ? file.name : 'csv_' + runId, sheets, sheetNames };
+          await analyzeSheetData({ runId, sheetName: sheetData.name, sheetData, input: file ? null : input, file, extension });
+        };
+
+        if (file) {
+          reader.readAsArrayBuffer(file);
+        } else {
+          reader.readAsText(new Blob([input]));
+        }
+      };
+
+      if (input && input?.trim() !== '') {
+        await processFile(null, 'csv');
+      }
+
+      for (const file of files) {
+        if (!Object.values(datasets).some(dataset => dataset.name === file.name)) {
+          const extension = file.name.endsWith('.xlsx') ? 'xlsx' : file.name.endsWith('.xls') ? 'xls' : 'csv';
+          await processFile(file, extension);
+        }
+      }
+    } catch (e) {
+      console.error('extractFile error:', e);
+    }
+  }
+
+
+
+
+  export async function analyzeSheetData({runId, sheetName, sheetData, input, extension='csv', file}) {
+
+    datasets[sheetName] = {
+      ...sheetData, 
+      magic: {
+        isLoading: true,
+        analysisResult: writable(''),
+        summaryResult: writable(''), 
+        dataSummary: writable(''), 
+        subsets: writable(''),
+        boundsResult: writable(''), // Add this line for bounds
+      }
+    };
+
+    let sheetDataStr = JSON.stringify(sheetData);
+    if (sheetDataStr.length > 198000) {
+      sheetDataStr = sheetDataStr.slice(0, 198000);
+    }
+  
+    let jsonExtractorPrompt = `Please 1) describe the data 2) extract the columns/schema 3) extract the bounds of the tabular data into Excel coordinates, into the data's own core components. If a comparison of two data sets, create TWO different sets and extract the same schema into both. Talk through the data. I want the bounds of the SMALLEST POSSIBLE DATASET. If there is a control group and experimental group (eg time / growth with or without phages) put these into two datasets, each with its own identical schema
+    - If you (e.g. a control, or car A vs car B), as two datasets.
+    - if growth data of two sets, separate them into two separate sets
+    - For each dataset, extract the schema and BOUNDS of the data: BOUNDS for each dataset are really important
+    - For a set of experiments, each experiment is a separate dataset
+    
+    \`\`\`data ${sheetDataStr} \`\`\` output your answers in json, with <json></json> to denote json
+          <json>[{
+            description:
+            schema: (clean/rephrase column name if necessary)
+            bounds: {
+              topLeft: "A1",
+              bottomRight: "ZZZ999"
+            }
+            values: (data)
+          }]
+        </json>
+        `
+
+    groqPromptStream(jsonExtractorPrompt, runId).then(async (result) => {
+      let subsets = extractJson(result);
+
+      if (!subsets || !Array.isArray(subsets) || subsets.length === 0) {
+        return;
+      }
+
+      const boundsPromises = subsets.map(async (subset, index) => {
+        const counter = index + 1;
+        const prompt = `Check your bounds and make sure they're correct. Think through the bounds where A = 1, B = 2, etc. and see if both the rows and columns match up to the edges of the data that exists on the given the analysis. Double check to ensure there are no blank columns, and no blank rows in your answer, for the given subset: <subset>${counter}</subset> Here is the full data for comparison <analysis>${result}</analysis>. ONLY RETURN FOR DATASET ${counter}, confirm correctness and give correct bounds in JSON format: <json>{ bounds: { topLeft, bottomRight} }</json>.`;
+        const correctedBounds = await groqPromptStream(prompt);
+        const newBounds = extractJson(correctedBounds);
+
+        console.log("NEWBOUNDS::", counter, newBounds);
+
+        if (Array.isArray(newBounds) && newBounds.length > 0) {
+          return { ...subset, bounds: newBounds[0].bounds };
+        }
+        return subset;
+      });
+
+      const updatedSubsets = await Promise.all(boundsPromises);
+
+      console.log('extracted subsets', updatedSubsets);
+      datasets[sheetData.name]['magic']['subsets'].update(value => updatedSubsets);
+    });
+  }
+
+</script>

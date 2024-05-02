@@ -1,0 +1,5 @@
+Month,Sales,Expenses,Profit
+Jan,1000,500,=B2-C2
+Feb,1500,750,=B3-C3
+Mar,1200,600,=B4-C4
+Total,=SUM(B2:B4),=SUM(C2:C4),=SUM(D2:D4)

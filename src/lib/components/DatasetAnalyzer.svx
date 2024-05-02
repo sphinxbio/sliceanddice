@@ -1,0 +1,115 @@
+<div class="UploadAnalyzerSingle | w-full">
+  <div class="dataset | rounded-md bg-amber-100/50 shadow-sm drop-shadow-sm shadow-amber-200/70 px-3 py-3 | ">
+    <div class="text-sm tracking-wide | mb-2">{dataset.name}</div>
+    {#each dataset.sheets as sheet}
+      <div class="text-sm tracking-wide |">
+        <span class="text-amber-900">Sheet:</span> {sheet.sheetName} <span class="text-amber-600">•</span>
+        <span class="text-amber-900">Rows:</span> {sheet.data.length} <span class="text-amber-600">•</span>
+        <span class="text-amber-900">Columns:</span> {sheet.columns.length} <span class="text-amber-600">•</span>
+        <span class="# text-amber-900">Data Cells:</span> {sheet.data.flat().filter(cell => cell && cell !== null && cell !== '').length}
+      </div>
+    {/each}
+
+    <SheetSelect data={dataset} bind:selectedData={selectedData} />
+
+    <div class="{$explanation !== '' && extractedJson ? 'grid grid-cols-2 gap-4' : ''}">
+
+        {#if $explanation && $explanation !== ''}
+          <div class="explanation | mt-2 border-2 p-2 rounded-md border-amber-200 ">
+            <div class="text-sm tracking-wide | my-2">
+              <strong>Explanation:</strong>
+              <div class="explanationStream">{$explanation}</div>
+            </div>
+          </div>
+        {/if}
+    
+        {#if extractedJson}
+          <div class="json | mt-2 border-2 p-2 rounded-md border-amber-200 ">
+            <div class="text-sm tracking-wide | my-2">
+              <pre class="text-sm bg-white whitespace-pre">{JSON.stringify(extractedJson, 0, 2)}</pre>
+            </div>
+          </div>
+        {/if}
+    </div>
+
+    {#if dataset.magic}
+      <div class="magic | mt-2 border-2 p-2 rounded-md border-amber-200 ">
+        <!-- many sections will be loaded... -->
+        <div class="text-sm tracking-wide | flex flex-row items-center | my-1">
+          <Magic class="inline-block mr-2 " pulse={dataset.magic?.isLoading} /> {#if dataset.magic?.isLoading}<span>Analyzing sheets...</span>{/if}
+        </div>  
+
+        <!-- boundary data slices -->
+        {#if Array.isArray($subsets) && $subsets && $subsets.length > 0}
+          <div class="datasets | mt-4 | rounded-md bg-amber-100/50 shadow-sm drop-shadow-sm shadow-amber-200/70 py-2 px-2">
+            
+            <div class="datasets-container">
+              {#each $subsets as subset, i}
+                <div class="subset">
+                  <div class="text-sm tracking-wide | mb-2">Slice {i+1}: {subset?.bounds?.topLeft} → {subset?.bounds?.bottomRight}</div>
+                  {#if subset?.description}
+                    <div class="text-amber-900 text-sm | ">
+                      <span class="">{subset?.description}</span>
+                    </div>
+                  {/if}
+                  {#if subset?.bounds?.topLeft && subset?.bounds?.bottomRight}
+                    <div class="mt-2">
+                      <SheetSelect data={dataset} selected={[subset?.bounds?.topLeft, subset?.bounds?.bottomRight]}/>
+                    </div>
+                  {/if}
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </div>
+</div>
+
+<script>
+  import { writable } from 'svelte/store';
+  import Magic from './Magic.svelte';
+  import SheetSelect from "./SheetSelect.svx";
+
+
+  import _ from 'lodash';
+  import { groqPromptStream, extractJson  } from "$lib/scripts/client-helpers";
+
+
+  export let dataset = {}, selectedData=[];
+  export let extractedJson, explanation = writable('');
+  // const subDatasets = dataset.magic?.analysis?.results?.datasets;
+  // const analysisResult = dataset.magic.analysisResult;
+  // const dataSummary = dataset.magic.dataSummary;
+  const subsets = dataset.magic.subsets;
+
+  $: if($subsets) {
+    console.log('[subsets]', $subsets)
+  }
+    
+  const explainData = _.debounce(async (data) => {
+    let prompt = `Help explain what this data means in a single paragraph. Only respond with answer like Wikipedia, not in first person / like an assistant: ${data}`;
+    console.log('[explainData prompt]', prompt);
+    $explanation = '' // clear it on new data
+    await groqPromptStream(prompt, null, explanation);
+  }, 800);
+  const getJson = _.debounce(async (data) => {
+    let prompt = `Help me extract this into JSON data. Collapse the data into array or JSON objects w/ fewest repetitions but keep all keys/columns/schema representations. Only respond with JSON with <json>{}</json>, not in first person / like an assistant: ${selectedData}`;
+    console.log('[extractJson prompt]', prompt);
+    let result = await groqPromptStream(prompt);
+    extractedJson = extractJson(result);
+    console.log('getJson json:', extractedJson)
+  }, 800);
+
+  $: if (selectedData && selectedData.length > 0) {
+    explainData(selectedData);
+    getJson(selectedData);
+  }
+
+
+</script>
+
+<style lang="scss" global>
+
+</style>

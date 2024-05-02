@@ -1,0 +1,37 @@
+
+
+<div class="outro | max-w-2xl mx-auto">
+  
+
+  <a href="https://sphinxbio.com" class="block | text-center mx-auto  | mt-24  ">
+    <div class="mb-6">
+      built for science, by
+    </div>
+    <img class="mx-auto " width="250" height="50" src="https://assets-global.website-files.com/64f63ffe0294045961ab6b54/64fbb72bc0f28079cb97d563_colorized_logo_outlined_with_black_text.svg" />
+
+    <div class="text-center mt-12 mb-4 max-w-xl mx-auto | text-amber-700/90 leading-6">
+      Thanks for checking us out! For our full suite of data analysis tools for biology visit sphinxbio.com.
+    </div>
+  </a>
+
+  <div class="block text-center mx-auto mt-4 mb-24">
+    <a class="inline-block pt-4" href="https://github.com/sphinxbio/sliceanddice">Github</a>
+  </div>
+
+
+</div>
+
+
+<style lang="scss" global>
+  .outro {
+    a, a > * {
+      @apply transition duration-300 ease-in-out ease-in-out text-amber-700/40 hover:text-amber-800/60 hover:no-underline decoration-amber-700;
+    }
+  }
+
+  .outro:hover {
+    &, * {
+      @apply text-amber-800/60;
+    }
+  }
+</style>

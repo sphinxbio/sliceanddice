@@ -1,0 +1,4 @@
+Date,Temperature (°C),Humidity (%),* Sensor: XYZ-001
+2023-01-01,25.5,60,* Location: Indoor
+2023-01-02,26.1,58,* Calibration Date: 2022-12-15
+2023-01-03,24.9,62,
