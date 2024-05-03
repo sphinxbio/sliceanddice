@@ -11,12 +11,16 @@
   import Head from '$lib/components/Head.svelte'
 </script>
 
-<Head />
+<!-- <Head /> -->
 
 <svelte:head>
+  <title>Slice & Dice</title>
+  <meta name="description" content="A small experiment that slices &amp; dices messy spreadsheets">
+  <meta content="https://f2.phage.directory/sphinx/slicendice-card.png" property="og:image">
+  <meta content="https://f2.phage.directory/sphinx/slicendice-card.png" property="og:image:url">
   <link rel="icon" href="/slicendice-sm.png" />
-  <title>Slice and Dice</title>
 </svelte:head>
+
 
 <div class="layout | mx-auto container ">
   <slot />

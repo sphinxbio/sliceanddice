@@ -9,6 +9,7 @@
 <div class="text-center pt-8 max-w-xl mx-auto | text-amber-700 leading-6">
   A small experiment that uses LLMs to <br>analyze and isolate data boundaries within messy spreadsheets.
   <span class="block mt-6">⚠️ Your sheet uploads will be uploaded to OpenAI/Claude/Groq, and monitored in our analytics. Please don't upload any sensitive or private data! ⚠️</span>
+  <span class="block mt-6"><a href="https://github.com/sphinxbio/sliceanddice">Github</a> | <a href="https://www.sphinxbio.com/post/ai-extraction-messy-spreadsheets">Read our blog post</a></span>
 </div>
 
 <style lang="scss" global>
